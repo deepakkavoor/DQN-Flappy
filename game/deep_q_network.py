@@ -22,13 +22,13 @@ class Network(object):
 
 	def bias_variable(self, shape):
 
-		return tf.Variable(tf.constant(0.01, shape))
+		return tf.Variable(tf.constant(0.01, shape=shape,dtype="float32"))
 
 	def conv2d(self, x, W, stride):
 
 		return tf.nn.conv2d(x, W, strides = [1, stride, stride, 1], padding = "SAME")
 
-	def max_pool(x):
+	def max_pool(self,x):
 
 		return tf.nn.max_pool(x, ksize = [1, 2, 2, 1], strides = [1, 2, 2, 1], padding = "SAME")
 
@@ -53,10 +53,10 @@ class Network(object):
 			#layers
 			self.inp = tf.placeholder(tf.float32, [None, 80, 80, 4])
 
-			h_conv1 = tf.nn.relu(self.conv2d(inp, W_conv1, 4) + b_conv1)
+			h_conv1 = tf.nn.relu(self.conv2d(self.inp, W_conv1, 4) + b_conv1)
 			h_maxpool1 = self.max_pool(h_conv1)
 
-			h_conv2 = tf.nn.relu(self.conv2d(h_maxpool1, w_conv2, 2) + b_conv2)
+			h_conv2 = tf.nn.relu(self.conv2d(h_maxpool1, W_conv2, 2) + b_conv2)
 
 			h_conv3 = tf.nn.relu(self.conv2d(h_conv2, W_conv3, 1) + b_conv3)
 
@@ -66,7 +66,7 @@ class Network(object):
 
 			self.out = tf.matmul(h_fc1, W_fc2) + b_fc2  #Q values
 
-			return inp, out, h_fc1
+			return self.inp, self.out, h_fc1
 
 
 class Flappy(object):
@@ -78,8 +78,8 @@ class Flappy(object):
 		self.img_depth = 4
 		self.epsilon = 0.1
 
-		self.num_episodes = 1e4
-		self.pre_train_steps = 1e4
+		self.num_episodes = 10000
+		self.pre_train_steps = 10000
 		self.update_freq = 100
 		self.batch_size = 32
 		self.gamma = 0.99
@@ -88,8 +88,8 @@ class Flappy(object):
 
 	def copy_network(self, net1, net2, sess):
 
-		vars_net1 = tf.get_collections(tf.GraphKeys, TRAINABLE_VARIABLES, net1.name)
-		vars_net2 = tf.get_collections(tf.GraphKeys, TRAINABLE_VARIABLES, net2.name)
+		vars_net1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, net1.name)
+		vars_net2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, net2.name)
 
 		for index in range(len(vars_net1)):
 			sess.run(vars_net2[index].assign(vars_net1[index]))
@@ -99,7 +99,7 @@ class Flappy(object):
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name = "target_reward")
 		self.action_list = tf.placeholder(tf.int32, [None, 1], name = "action_list")
 
-		observed_reward = tf.reduce_sum(self.main_net.out * tf.one_hot(tf.reshape(self.actions_list[-1]), 2, dtype = tf.float32), 1, keep_dims = True)
+		observed_reward = tf.reduce_sum(self.main_net.out * tf.one_hot(tf.reshape(self.action_list,[-1]), 2, dtype = tf.float32), 1, keep_dims = True)
 
 		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
@@ -123,7 +123,7 @@ class Flappy(object):
 			if temp < self.epsilon:
 				temp_action = random.randint(0, 1)
 			else:
-				temp_q_values = sess.run([self.main_net.q_values], feed_dict = {self.main_net.inp: np.reshape(np.stack(img_batch, axis = 2), [-1, 80, 80, 4])})
+				temp_q_values = sess.run([self.main_net.out], feed_dict = {self.main_net.inp: np.reshape(np.stack(img_batch, axis = 2), [-1, 80, 80, 4])})
 				temp_action = np.argmax(temp_q_values)
 
 			return temp_action
@@ -277,7 +277,7 @@ class Flappy(object):
 
 def main():
 
-	model = flappy()
+	model = Flappy()
 	model.train()
 	#model.play("not random")
 
