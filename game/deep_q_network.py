@@ -76,10 +76,10 @@ class Flappy(object):
 		self.img_width = 80
 		self.img_height = 80
 		self.img_depth = 4
-		self.epsilon = 0.05
+		self.epsilon = 0.01   #might have to decrease this value during later stages of training
 
-		self.num_episodes = 10000
-		self.pre_train_steps = 10000
+		self.num_episodes = 100000
+		self.pre_train_steps = 50000    #I have kept this to a large value. Decrease it if not necessary
 		self.update_freq = 100
 		self.batch_size = 32
 		self.gamma = 0.99
@@ -97,13 +97,13 @@ class Flappy(object):
 	def model(self):
 
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name = "target_reward")
-		self.action_list = tf.placeholder(tf.int32, [None, 1], name = "action_list")
+		self.action_list = tf.placeholder(tf.uint32, [None, 1], name = "action_list")     #changed from int32 to uint32
 
 		observed_reward = tf.reduce_sum(self.main_net.out * tf.one_hot(tf.reshape(self.action_list,[-1]), 2, dtype = tf.float32), 1, keepdims = True)
 
 		self.loss = tf.reduce_mean(tf.square(observed_reward - self.target_reward))
 
-		optimizer = tf.train.GradientDescentOptimizer(learning_rate = self.learning_rate)
+		optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
 		self.loss_opt = optimizer.minimize(self.loss)
 
 		self.model_vars = tf.trainable_variables()
@@ -121,7 +121,8 @@ class Flappy(object):
 			temp = random.random()
 
 			if temp < self.epsilon:
-				temp_action = 0 if random.randint(0, 1) <= 0.99 else 1
+				print("Random Action from Epsilon Greedy")
+				temp_action = random.randint(0, 1)
 			else:
 				temp_q_values = sess.run([self.main_net.out], feed_dict = {self.main_net.inp: np.reshape(np.stack(img_batch, axis = 2), [-1, 80, 80, 4])})
 				temp_action = np.argmax(temp_q_values)
@@ -159,7 +160,7 @@ class Flappy(object):
 				img_batch = []
 				total_reward = 0.0
 
-				temp_action = 0 if random.randint(0, 1) <= 0.99 else 1
+				temp_action = random.randint(0, 1)
 				action = np.zeros([2])
 				action[temp_action] = 1
 				new_state, reward, done = game_state.frame_step(action)
@@ -171,8 +172,9 @@ class Flappy(object):
 
 				while(True):
 
-					if total_steps < 500:
-						temp_action = 0 if random.randint(0, 1) <= 0.99 else 1
+					if total_steps < 2000:
+						temp_action = random.randint(0, 1)
+						print("Exploring. Action taken: ", temp_action)
 					else:
 						temp_action = self.policy(sess, "epsilon_greedy", img_batch)
 
@@ -183,6 +185,7 @@ class Flappy(object):
 					new_state, reward, done = game_state.frame_step(action)
 
 					temp_img = self.pre_process(new_state)
+					temp_img = np.reshape(temp_img, (80, 80, 1))   #added this new
 
 					total_reward += reward
 
@@ -210,10 +213,18 @@ class Flappy(object):
 						action_hist = [m[1] for m in rand_batch]
 						next_state_hist = [m[3] for m in rand_batch]
 
-						temp_target_q = sess.run(self.target_net.out, feed_dict = {self.target_net.inp: np.stack(next_state_hist)})
 
-						temp_target_q = np.amax(temp_target_q, 1)
-						temp_target_reward = reward_hist + self.gamma * temp_target_q
+						temp_target_q = sess.run(self.target_net.out, feed_dict = {self.target_net.inp: np.stack(next_state_hist)})
+						temp_target_reward=[]
+
+						for i in range(self.batch_size):
+							terminal = rand_batch[i][4]
+							if terminal:
+								temp_target_reward.append(reward_hist[i])
+							else:
+								#temp_target_q = np.amax(temp_target_q, 1)
+								temp_target_reward.append(reward_hist[i] + self.gamma * np.max(temp_target_q[i]))
+
 						temp_target_reward = np.reshape(temp_target_reward, [self.batch_size, 1])
 
 						_ = sess.run(self.loss_opt,
@@ -225,6 +236,8 @@ class Flappy(object):
 
 						print("Training...")
 
+					#added this new
+					img_batch = new_img_batch
 
 					if done:
 						break
