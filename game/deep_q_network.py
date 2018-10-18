@@ -121,9 +121,8 @@ class Flappy(object):
 		if algo == "epsilon_greedy":
 			temp = random.random()
 
-			if temp < self.epsilon:
-				print("Random Action from Epsilon Greedy")
-				temp_action = random.randint(0, 1)
+			if temp <= self.epsilon:
+				temp_action = 0 if random.random() <= 0.7 else 1
 			else:
 				temp_q_values = sess.run([self.main_net.out], feed_dict = {self.main_net.inp: np.reshape(np.stack(img_batch, axis = 2), [-1, 80, 80, 4])})
 				temp_action = np.argmax(temp_q_values)
@@ -174,7 +173,7 @@ class Flappy(object):
 				while(True):
 
 					if total_steps < 3000:
-						temp_action = random.randint(0, 1)
+						temp_action = 0 if random.random() <= 0.7 else 1
 						#print("Exploring. Action taken: ", temp_action)
 					else:
 						temp_action = self.policy(sess, "epsilon_greedy", img_batch)
