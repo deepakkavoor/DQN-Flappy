@@ -76,10 +76,10 @@ class Flappy(object):
 		self.img_width = 80
 		self.img_height = 80
 		self.img_depth = 4
-		self.epsilon = 0.001   #might have to decrease this value during later stages of training
+		self.epsilon = 0.1  #might have to decrease this value during later stages of training
 
 		self.num_episodes = 100000
-		self.pre_train_steps = 10000
+		self.pre_train_steps = 4000
 		    #I have kept this to a large value. Decrease it if not necessary
 		self.update_freq = 100
 		self.batch_size = 32
@@ -122,7 +122,7 @@ class Flappy(object):
 			temp = random.random()
 
 			if temp <= self.epsilon:
-				temp_action = 0 if random.random() <= 0.7 else 1
+				temp_action = random.randint(0, 1)
 			else:
 				temp_q_values = sess.run([self.main_net.out], feed_dict = {self.main_net.inp: np.reshape(np.stack(img_batch, axis = 2), [-1, 80, 80, 4])})
 				temp_action = np.argmax(temp_q_values)
@@ -173,7 +173,7 @@ class Flappy(object):
 				while(True):
 
 					if total_steps < 3000:
-						temp_action = 0 if random.random() <= 0.7 else 1
+						temp_action = 0 if random.random() <= 0.9 else 1
 						#print("Exploring. Action taken: ", temp_action)
 					else:
 						temp_action = self.policy(sess, "epsilon_greedy", img_batch)
@@ -194,7 +194,7 @@ class Flappy(object):
 
 					hist_buffer.append((np.stack(img_batch, axis = 2), temp_action, reward, np.stack(new_img_batch, axis = 2), done))
 
-					if len(hist_buffer) >= 10000:
+					if len(hist_buffer) >= 25000:
 						hist_buffer.pop(0)
 
 					# Adding image to the batch
