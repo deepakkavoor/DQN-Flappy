@@ -7,7 +7,7 @@ import pygame.surfarray as surfarray
 from pygame.locals import *
 from itertools import cycle
 
-FPS = 30
+FPS = 100
 SCREENWIDTH  = 288
 SCREENHEIGHT = 512
 
@@ -17,7 +17,7 @@ SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 pygame.display.set_caption('Flappy Bird')
 
 IMAGES, SOUNDS, HITMASKS = flappy_bird_utils.load()
-PIPEGAPSIZE = 100 # gap between upper and lower part of pipe
+PIPEGAPSIZE = 150 # gap between upper and lower part of pipe
 BASEY = SCREENHEIGHT * 0.79
 
 PLAYER_WIDTH = IMAGES['player'][0].get_width()
@@ -75,13 +75,13 @@ class GameState:
                 #SOUNDS['wing'].play()
 
         # check for score
-        playerMidPos = self.playerx + PLAYER_WIDTH / 2
+        playerMidPos = self.playerx + PLAYER_WIDTH #/ 2
         for pipe in self.upperPipes:
-            pipeMidPos = pipe['x'] + PIPE_WIDTH / 2
+            pipeMidPos = pipe['x'] #+ PIPE_WIDTH / 2
             if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                 self.score += 1
                 #SOUNDS['point'].play()
-                reward = 1
+                reward = 10
 
         # playerIndex basex change
         if (self.loopIter + 1) % 3 == 0:
@@ -123,7 +123,7 @@ class GameState:
             #SOUNDS['die'].play()
             terminal = True
             self.__init__()
-            reward = -1
+            reward = -5
 
         # draw sprites
         SCREEN.blit(IMAGES['background'], (0,0))
@@ -182,7 +182,7 @@ def checkCrash(player, upperPipes, lowerPipes):
     player['h'] = IMAGES['player'][0].get_height()
 
     # if player crashes into ground
-    if player['y'] + player['h'] >= BASEY - 1:
+    if player['y'] + player['h'] >= BASEY - 1 or player['y'] <= 0:
         return True
     else:
 

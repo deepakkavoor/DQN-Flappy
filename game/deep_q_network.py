@@ -76,10 +76,11 @@ class Flappy(object):
 		self.img_width = 80
 		self.img_height = 80
 		self.img_depth = 4
-		self.epsilon = 0.01   #might have to decrease this value during later stages of training
+		self.epsilon = 0.001   #might have to decrease this value during later stages of training
 
 		self.num_episodes = 100000
-		self.pre_train_steps = 50000    #I have kept this to a large value. Decrease it if not necessary
+		self.pre_train_steps = 10000
+		    #I have kept this to a large value. Decrease it if not necessary
 		self.update_freq = 100
 		self.batch_size = 32
 		self.gamma = 0.99
@@ -97,7 +98,7 @@ class Flappy(object):
 	def model(self):
 
 		self.target_reward = tf.placeholder(tf.float32, [None, 1], name = "target_reward")
-		self.action_list = tf.placeholder(tf.uint32, [None, 1], name = "action_list")     #changed from int32 to uint32
+		self.action_list = tf.placeholder(tf.uint8, [None, 1], name = "action_list")     #changed from int32 to uint32
 
 		observed_reward = tf.reduce_sum(self.main_net.out * tf.one_hot(tf.reshape(self.action_list,[-1]), 2, dtype = tf.float32), 1, keepdims = True)
 
@@ -172,9 +173,9 @@ class Flappy(object):
 
 				while(True):
 
-					if total_steps < 2000:
+					if total_steps < 3000:
 						temp_action = random.randint(0, 1)
-						print("Exploring. Action taken: ", temp_action)
+						#print("Exploring. Action taken: ", temp_action)
 					else:
 						temp_action = self.policy(sess, "epsilon_greedy", img_batch)
 
@@ -185,7 +186,7 @@ class Flappy(object):
 					new_state, reward, done = game_state.frame_step(action)
 
 					temp_img = self.pre_process(new_state)
-					temp_img = np.reshape(temp_img, (80, 80, 1))   #added this new
+					#temp_img = np.reshape(temp_img, (80, 80))   #added this new
 
 					total_reward += reward
 
@@ -194,7 +195,7 @@ class Flappy(object):
 
 					hist_buffer.append((np.stack(img_batch, axis = 2), temp_action, reward, np.stack(new_img_batch, axis = 2), done))
 
-					if len(hist_buffer) >= 50000:
+					if len(hist_buffer) >= 10000:
 						hist_buffer.pop(0)
 
 					# Adding image to the batch
@@ -217,13 +218,13 @@ class Flappy(object):
 						temp_target_q = sess.run(self.target_net.out, feed_dict = {self.target_net.inp: np.stack(next_state_hist)})
 						temp_target_reward=[]
 
-						for i in range(self.batch_size):
-							terminal = rand_batch[i][4]
+						for j in range(self.batch_size):
+							terminal = rand_batch[j][4]
 							if terminal:
-								temp_target_reward.append(reward_hist[i])
+								temp_target_reward.append(reward_hist[j])
 							else:
 								#temp_target_q = np.amax(temp_target_q, 1)
-								temp_target_reward.append(reward_hist[i] + self.gamma * np.max(temp_target_q[i]))
+								temp_target_reward.append(reward_hist[j] + self.gamma * np.max(temp_target_q[j]))
 
 						temp_target_reward = np.reshape(temp_target_reward, [self.batch_size, 1])
 
@@ -234,10 +235,10 @@ class Flappy(object):
 						if total_steps % self.update_freq == 0:
 							self.copy_network(self.main_net, self.target_net, sess)
 
-						print("Training...")
+						#print("Training...")
 
 					#added this new
-					img_batch = new_img_batch
+					#img_batch = new_img_batch
 
 					if done:
 						break
