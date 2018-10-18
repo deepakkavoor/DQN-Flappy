@@ -76,7 +76,11 @@ class Flappy(object):
 		self.img_width = 80
 		self.img_height = 80
 		self.img_depth = 4
+<<<<<<< HEAD
 		self.epsilon = 0.1  #might have to decrease this value during later stages of training
+=======
+		self.epsilon = 0.03   #might have to decrease this value during later stages of training
+>>>>>>> 5a29733df5007980b16ac5da2384195c4a1d153d
 
 		self.num_episodes = 100000
 		self.pre_train_steps = 4000
