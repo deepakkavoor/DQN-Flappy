@@ -88,7 +88,7 @@ class Flappy(object):
 		self.update_freq = 100
 		self.batch_size = 32
 		self.gamma = 0.99
-		self.learning_rate = 1e-6
+		self.learning_rate = 3e-5
 		self.max_steps = 1e4
 
 	def copy_network(self, net1, net2, sess):
