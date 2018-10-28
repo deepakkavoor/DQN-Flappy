@@ -1,12 +1,13 @@
+import sys
+#sys.path.append("game/")
+
 import tensorflow as tf
 import cv2
-import sys
 import wrapped_flappy_bird as game
 import random
 import numpy as np
 from collections import deque
 
-sys.path.append("game/")
 
 class Network(object):
 
@@ -76,10 +77,10 @@ class Flappy(object):
 		self.img_width = 80
 		self.img_height = 80
 		self.img_depth = 4
-		
+		self.epsilon = 0.1  #might have to decrease this value during later stages of training
 		self.epsilon = 0.03   #might have to decrease this value during later stages of training
 		self.num_episodes = 100000
-		self.pre_train_steps = 5000
+		self.pre_train_steps = 3000
 		    #I have kept this to a large value. Decrease it if not necessary
 		self.update_freq = 100
 		self.batch_size = 32
@@ -152,6 +153,16 @@ class Flappy(object):
 			total_reward_list = []
 			hist_buffer = []
 
+			a_file = open("logs" + "/readout.txt", 'w')
+			h_file = open("logs" + "/hidden.txt", 'w')
+			saver = tf.train.Saver()
+			checkpoint = tf.train.get_checkpoint_state("saved_networks")
+			if checkpoint and checkpoint.model_checkpoint_path:
+				saver.restore(sess, checkpoint.model_checkpoint_path)
+				print("Successfully loaded:", checkpoint.model_checkpoint_path)
+			else:
+				print("Could not find old network weights")
+
 			for i in range(self.num_episodes):
 
 				#Adding initial 4 frames to the image buffer array
@@ -194,7 +205,7 @@ class Flappy(object):
 
 					hist_buffer.append((np.stack(img_batch, axis = 2), temp_action, reward, np.stack(new_img_batch, axis = 2), done))
 
-					if len(hist_buffer) >= 25000:
+					if len(hist_buffer) >= 50000:
 						hist_buffer.pop(0)
 
 					# Adding image to the batch
@@ -238,6 +249,10 @@ class Flappy(object):
 
 					#added this new
 					#img_batch = new_img_batch
+
+					if total_steps % 5000 == 0:
+						saver.save(sess, 'saved_networks/' + '-dqn', global_step = total_steps)
+
 
 					if done:
 						break
